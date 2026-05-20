@@ -71,7 +71,4 @@ aura/
 - [Lucide React](https://lucide.dev/) (Icons)
 - [TypeScript](https://www.typescriptlang.org/)
 
----
-
-Built with ❤️ by [Your Name/Organization]
 # Aura

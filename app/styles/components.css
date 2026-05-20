@@ -1,0 +1,160 @@
+/* Interactive Flex Accordion (Arrows) */
+.arrow-container {
+    display: flex;
+    gap: 1rem;
+    height: 100%;
+    width: 100%;
+}
+.arrow-item {
+    flex: 1;
+    transition: flex 0.6s cubic-bezier(0.16, 1, 0.3, 1), filter 0.6s ease;
+    background-size: cover;
+    background-position: center;
+}
+@media (min-width: 768px) {
+    .arrow-container:hover .arrow-item {
+        flex: 1;
+    }
+    .arrow-container .arrow-item:hover {
+        flex: 2.5;
+        filter: grayscale(0);
+    }
+}
+
+.clip-arrow-first {
+    clip-path: polygon(0 0, 85% 0, 100% 50%, 85% 100%, 0 100%);
+}
+.clip-arrow-middle {
+    clip-path: polygon(0 0, 85% 0, 100% 50%, 85% 100%, 0 100%, 15% 50%);
+}
+.clip-arrow-last {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 15% 50%);
+}
+
+/* Text Highlight Draw */
+.highlight-draw {
+    background-image: linear-gradient(120deg, #fef3c7 0%, #fef3c7 100%);
+    background-repeat: no-repeat;
+    background-size: 0% 100%;
+    background-position: 0% 100%;
+    transition: background-size 1s cubic-bezier(0.16, 1, 0.3, 1) 0.2s;
+    padding: 0 0.2rem;
+    border-radius: 2px;
+}
+.highlight-draw.in-view {
+    background-size: 100% 100%;
+}
+
+/* Animated Step Lines */
+.line-draw {
+    width: 0%;
+    transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.line-draw.in-view {
+    width: 100%;
+}
+
+/* Staggered Step Translation */
+.step-row {
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.step-row:hover {
+    transform: translateX(20px);
+}
+
+/* Stable Animated Buttons */
+.magnetic-btn {
+    display: inline-flex;
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, background-color 0.3s ease, color 0.3s ease;
+}
+.magnetic-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.2);
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: -1;
+    border-radius: 50% 50% 0 0;
+}
+.bg-white.magnetic-btn::after { background: rgba(0,0,0,0.05); }
+.magnetic-btn:hover {
+    transform: scale(1.02);
+    box-shadow: 0 15px 30px -10px rgba(0,0,0,0.3);
+}
+.bg-white.magnetic-btn:hover {
+    box-shadow: 0 15px 30px -10px rgba(255,255,255,0.3);
+}
+.magnetic-btn:hover::after {
+    transform: translateY(0);
+    border-radius: 0;
+}
+.magnetic-btn:active {
+    transform: scale(0.98);
+}
+
+/* Service Sibling Blur & Kinetic Service Flips */
+.services-wrapper {
+    transition: all 0.4s ease;
+}
+.service-row {
+    transition: all 0.4s ease;
+}
+.services-wrapper:hover .service-row:not(:hover) {
+    opacity: 0.3;
+    filter: blur(4px);
+}
+.service-text {
+    display: inline-block;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), color 0.4s;
+    transform-origin: left center;
+}
+.service-row:hover .service-text {
+    transform: scale(1.05) rotateZ(-2deg);
+    color: #ffffff;
+}
+.service-row .service-desc {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.4s ease;
+}
+.service-row:hover .service-desc {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Elastic Bezier Underlines (Nav) */
+.nav-link {
+    position: relative;
+    display: inline-block;
+    padding-bottom: 2px;
+}
+.nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 1.5px;
+    background: #111;
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.4s cubic-bezier(0.86, 0, 0.07, 1);
+}
+.nav-link:hover::after {
+    transform: scaleX(1);
+    transform-origin: left;
+}
+
+@media (max-width: 768px) {
+    .nav-link, .scramble-text {
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+}

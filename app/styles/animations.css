@@ -1,0 +1,158 @@
+/* 3D Tilt Cards & Holographic 3D Glare */
+.tilt-wrapper {
+    perspective: 1000px;
+    transform-style: preserve-3d;
+}
+.tilt-inner {
+    transition: transform 0.1s ease-out;
+    transform-style: preserve-3d;
+    will-change: transform;
+    position: relative;
+    overflow: hidden;
+}
+.tilt-glare {
+    position: absolute;
+    inset: -50%;
+    background: linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.4) 25%, transparent 30%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    transform: translateX(-100%);
+    pointer-events: none;
+    z-index: 10;
+}
+.tilt-wrapper:hover .tilt-glare {
+    opacity: 1;
+    transform: translateX(100%);
+    transition: transform 1.5s ease-in-out;
+}
+
+/* Footer Massive Text Rise */
+.footer-reveal {
+    transform: translateY(100px) scale(0.9);
+    opacity: 0;
+    transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.footer-reveal.in-view {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+
+/* Pulsing Counter Aura */
+.counter-val {
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    display: inline-block;
+}
+.counter-val.pop {
+    transform: scale(1.1);
+    text-shadow: 0 0 30px rgba(255,255,255,0.4);
+}
+
+/* --- [NEW] OUTLAND HERO ANIMATIONS --- */
+@keyframes slow-zoom {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.1); }
+}
+.animate-slow-zoom {
+    animation: slow-zoom 20s ease-in-out infinite alternate;
+    will-change: transform;
+}
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-12px); }
+    100% { transform: translateY(0px); }
+}
+.animate-float {
+    animation: float 6s ease-in-out infinite;
+}
+.animate-float-delayed {
+    animation: float 6s ease-in-out infinite;
+    animation-delay: -3s;
+}
+
+/* --- [NEW] EXPERIMENTAL TOPOGRAPHIC TEXT --- */
+.text-topographic {
+    color: transparent;
+    -webkit-text-stroke: 2px rgba(255, 255, 255, 1);
+    background-image: 
+        repeating-radial-gradient(ellipse at 10% 40%, transparent 0%, transparent 12px, rgba(255, 255, 255, 0.4) 13px, transparent 14px),
+        repeating-radial-gradient(ellipse at 90% 60%, transparent 0%, transparent 18px, rgba(255, 255, 255, 0.5) 19px, transparent 20px);
+    background-size: 150% 150%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: topo-flow 25s ease-in-out infinite alternate;
+    filter: drop-shadow(0 15px 25px rgba(0,0,0,0.5));
+}
+@keyframes topo-flow {
+    0% { background-position: 0% 0%; background-size: 120% 120%; }
+    100% { background-position: 100% 100%; background-size: 200% 200%; }
+}
+
+/* Architectural Blinds Reveal */
+.hero-blind { 
+    position: absolute; left: 0; width: 100%; height: 33.334%; background: #000; z-index: 100;
+    transition: transform 1.2s cubic-bezier(0.77, 0, 0.175, 1);
+}
+.hero-blind:nth-child(1) { top: 0; transform-origin: top; }
+.hero-blind:nth-child(2) { top: 33.333%; transform-origin: bottom; }
+.hero-blind:nth-child(3) { top: 66.666%; transform-origin: top; }
+
+.hero-blinds-open .hero-blind {
+    transform: scaleY(0);
+}
+
+/* Deep Layer Transparent Stroke Text */
+.stroke-text-huge {
+    -webkit-text-stroke: 2px rgba(0,0,0,0.06);
+    color: transparent;
+    user-select: none;
+}
+
+/* Floating Glass Refractor */
+.glass-refractor {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(16px) brightness(1.1);
+    -webkit-backdrop-filter: blur(16px) brightness(1.1);
+    border: 1px solid rgba(255,255,255,0.4);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.1), inset 0 0 20px rgba(255,255,255,0.5);
+}
+
+/* Entrance Animations for 3D Elements */
+.anim-entrance-up {
+    opacity: 0;
+    transform: translateY(80px);
+    animation: entranceUp 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: transform, opacity;
+}
+@keyframes entranceUp {
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Image hover zooms & Parallax Depth */
+.zoom-img-container {
+    overflow: hidden;
+    position: relative;
+}
+.parallax-img {
+    width: 100%;
+    height: 120%;
+    object-fit: cover;
+    transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform;
+    position: absolute;
+    top: -10%;
+    left: 0;
+}
+.zoom-img-container:hover .parallax-img {
+    transform: scale(1.05) translateY(0) !important;
+}
+
+.testimonial-slide {
+    transition: opacity 0.5s ease;
+}
+
+/* Stacking Depth Cards */
+.stack-card {
+    transform-origin: top center;
+    will-change: transform, filter;
+    transition: transform 0.4s ease-out, filter 0.4s ease-out; 
+}
