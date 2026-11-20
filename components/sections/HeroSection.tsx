@@ -1,14 +1,16 @@
 import React, { useRef } from 'react';
-import { motion, useScroll, useTransform } from 'motion/react';
+import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react';
+import { EASE_CLIP, EASE_OUT } from '@/lib/motion';
 
 export function Hero() {
   const containerRef = useRef(null);
+  const reduceMotion = useReducedMotion() ?? false;
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start start", "end start"]
   });
 
-  const y = useTransform(scrollYProgress, [0, 1], ["0%", "40%"]);
+  const y = useTransform(scrollYProgress, [0, 1], ["0%", reduceMotion ? "0%" : "40%"]);
   const opacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
   return (
@@ -17,15 +19,15 @@ export function Hero() {
       {/* Animated Background */}
       <motion.div style={{ y, opacity }} className="absolute inset-0 z-0">
         <motion.div 
-          initial={{ clipPath: "polygon(15% 15%, 85% 15%, 85% 85%, 15% 85%)" }}
+          initial={{ clipPath: reduceMotion ? "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)" : "polygon(15% 15%, 85% 15%, 85% 85%, 15% 85%)" }}
           animate={{ clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)" }}
-          transition={{ duration: 1.8, ease: [0.76, 0, 0.24, 1] }}
+          transition={{ duration: reduceMotion ? 0 : 1.8, ease: EASE_CLIP }}
           className="w-full h-full"
         >
           <motion.img 
-            initial={{ scale: 1.2 }}
+            initial={{ scale: reduceMotion ? 1 : 1.2 }}
             animate={{ scale: 1 }}
-            transition={{ duration: 2.5, ease: "easeOut" }}
+            transition={{ duration: reduceMotion ? 0 : 2.5, ease: EASE_OUT }}
             src="https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=2800&q=80" 
             alt="Luxury Resort" 
             className="w-full h-full object-cover" 
@@ -37,9 +39,9 @@ export function Hero() {
       {/* Typography */}
       <div className="relative z-10 text-center px-6 w-full max-w-7xl mx-auto flex flex-col items-center justify-center h-full pt-20 pointer-events-none">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: reduceMotion ? 0 : 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 1 }}
+          transition={{ duration: reduceMotion ? 0.2 : 1, delay: reduceMotion ? 0 : 1 }}
           className="overflow-hidden mb-4"
         >
           <span className="uppercase tracking-[0.4em] text-xs md:text-sm font-semibold text-white/90">
@@ -49,9 +51,9 @@ export function Hero() {
         
         <div className="overflow-hidden">
           <motion.h1 
-            initial={{ y: "100%" }}
+            initial={{ y: reduceMotion ? "0%" : "100%" }}
             animate={{ y: "0%" }}
-            transition={{ duration: 1.2, delay: 1.2, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: reduceMotion ? 0 : 1.2, delay: reduceMotion ? 0 : 1.2, ease: EASE_OUT }}
             className="text-6xl md:text-8xl lg:text-[11rem] font-black text-white leading-[0.85] tracking-tighter uppercase"
           >
             THE <span className="font-serif italic font-light text-white/90 lowercase tracking-normal">perfect</span>
@@ -59,9 +61,9 @@ export function Hero() {
         </div>
         <div className="overflow-hidden">
           <motion.h1 
-            initial={{ y: "100%" }}
+            initial={{ y: reduceMotion ? "0%" : "100%" }}
             animate={{ y: "0%" }}
-            transition={{ duration: 1.2, delay: 1.3, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: reduceMotion ? 0 : 1.2, delay: reduceMotion ? 0 : 1.3, ease: EASE_OUT }}
             className="text-6xl md:text-8xl lg:text-[11rem] font-black text-white leading-[0.85] tracking-tighter uppercase"
           >
             ESCAPE
@@ -71,9 +73,9 @@ export function Hero() {
 
       {/* Booking Bar */}
       <motion.div 
-        initial={{ opacity: 0, y: 40 }}
+        initial={{ opacity: 0, y: reduceMotion ? 0 : 40 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1.2, delay: 1.8, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: reduceMotion ? 0.2 : 1.2, delay: reduceMotion ? 0 : 1.8, ease: EASE_OUT }}
         className="absolute bottom-10 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:right-auto z-20"
       >
         <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-2 rounded-2xl md:rounded-full flex flex-col md:flex-row items-center gap-2 md:gap-6 shadow-2xl">

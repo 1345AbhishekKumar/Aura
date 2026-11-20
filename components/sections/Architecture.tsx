@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
+import { EASE_DRAWER } from '@/lib/motion';
 
 export function ArchitectureDeal() {
   return (
@@ -62,6 +63,7 @@ export function DigitalTwin() {
 
 export function SensoryPalette() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const reduceMotion = useReducedMotion() ?? false;
   
   const items = [
     { title: "Texture", desc: "Egyptian cotton & raw silk", img: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=800" },
@@ -88,7 +90,7 @@ export function SensoryPalette() {
                     className="relative rounded-2xl overflow-hidden cursor-pointer"
                     initial={{ flex: 1 }}
                     animate={{ flex: hoveredIndex === i ? 3 : hoveredIndex === null ? 1 : 0.5 }}
-                    transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
+                    transition={{ duration: reduceMotion ? 0 : 0.5, ease: EASE_DRAWER }}
                     onMouseEnter={() => setHoveredIndex(i)}
                     onMouseLeave={() => setHoveredIndex(null)}
                 >
@@ -97,7 +99,7 @@ export function SensoryPalette() {
                         alt={item.title}
                         className="absolute inset-0 w-full h-full object-cover"
                         animate={{ scale: hoveredIndex === i ? 1.05 : 1 }}
-                        transition={{ duration: 0.5 }}
+                        transition={{ duration: reduceMotion ? 0 : 0.5 }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                     

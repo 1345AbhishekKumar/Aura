@@ -1,7 +1,12 @@
 import { useEffect } from 'react';
+import { prefersReducedMotion } from '@/lib/utils';
 
 export function useCursorAndInteractions() {
   useEffect(() => {
+    const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    if (!canHover) return;
+    if (prefersReducedMotion()) return;
+
     // 1. Magic Cursor
     const cursor = document.getElementById('magic-cursor');
     const hoverElements = document.querySelectorAll('a, button, .magnetic-btn, .h-scroll-item, .arrow-item, .service-row, .tilt-wrapper');
@@ -12,21 +17,43 @@ export function useCursorAndInteractions() {
     let mouseY = window.innerHeight / 2;
     let cursorX = mouseX;
     let cursorY = mouseY;
-    let animationFrameId: number;
+    let cursorRaf = 0;
+    let cursorRunning = false;
+    let lastCursorTime = 0;
 
-    const updateCursor = () => {
-        if (cursor) {
-            cursorX += (mouseX - cursorX) * 0.15;
-            cursorY += (mouseY - cursorY) * 0.15;
-            cursor.style.transform = `translate3d(calc(${cursorX}px - 50%), calc(${cursorY}px - 50%), 0)`;
+    const updateCursor = (now: number) => {
+        if (!cursor) return;
+
+        const dt = lastCursorTime ? Math.min(now - lastCursorTime, 64) : 16.7;
+        lastCursorTime = now;
+        const alpha = 1 - Math.exp(-dt / 100);
+
+        cursorX += (mouseX - cursorX) * alpha;
+        cursorY += (mouseY - cursorY) * alpha;
+        cursor.style.transform = `translate3d(calc(${cursorX}px - 50%), calc(${cursorY}px - 50%), 0)`;
+
+        if (Math.abs(mouseX - cursorX) < 0.1 && Math.abs(mouseY - cursorY) < 0.1) {
+            cursorX = mouseX;
+            cursorY = mouseY;
+            cursorRunning = false;
+            cursorRaf = 0;
+            lastCursorTime = 0;
+            return;
         }
-        animationFrameId = requestAnimationFrame(updateCursor);
+
+        cursorRaf = requestAnimationFrame(updateCursor);
     };
-    animationFrameId = requestAnimationFrame(updateCursor);
+
+    const startCursor = () => {
+        if (!cursor || cursorRunning) return;
+        cursorRunning = true;
+        cursorRaf = requestAnimationFrame(updateCursor);
+    };
 
     const handlePointerMove = (e: PointerEvent) => {
         mouseX = e.clientX;
         mouseY = e.clientY;
+        startCursor();
 
         // Diorama Hero Tilt
         if (heroSection && diorama) {
@@ -166,7 +193,7 @@ export function useCursorAndInteractions() {
 
     return () => {
         window.removeEventListener('pointermove', handlePointerMove);
-        cancelAnimationFrame(animationFrameId);
+        if (cursorRaf) cancelAnimationFrame(cursorRaf);
     };
   }, []);
 }

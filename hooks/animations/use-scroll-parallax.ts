@@ -1,188 +1,352 @@
 import { useEffect } from 'react';
+import { prefersReducedMotion } from '@/lib/utils';
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
 
 export function useScrollAndParallax() {
   useEffect(() => {
     const navbar = document.getElementById('navbar');
     const progressBar = document.getElementById('progress-bar');
-    const navLogo = document.getElementById('nav-logo');
-    const navLinks = document.querySelectorAll('.nav-link');
-    const navCta = document.getElementById('nav-cta');
-    const parallaxImgs = document.querySelectorAll('.parallax-img, #outroParallax');
-    const stackCards = document.querySelectorAll('.stack-card');
-    const fragments = document.querySelectorAll('.fragment');
+    const navLogo = document.querySelector<HTMLElement>('.nav-logo');
+    const navLinks = document.querySelectorAll<HTMLElement>('.nav-link');
+    const navCta = document.querySelector<HTMLElement>('.nav-cta');
+    const parallaxImgs = document.querySelectorAll<HTMLElement>(
+      '.parallax-img, #outroParallax'
+    );
+    const stackCards = document.querySelectorAll<HTMLElement>('.stack-card');
     const hScrollTrack = document.getElementById('h-scroll-track');
     const hScrollWrapper = document.getElementById('h-scroll-wrapper');
-    const twinReal = document.querySelector('.twin-real') as HTMLElement;
-    const scanLine = document.querySelector('.scan-line') as HTMLElement;
-    const twinContainer = document.querySelector('.digital-twin-container') as HTMLElement;
-    const tunnelFrames = document.querySelectorAll('.tunnel-frame');
-    const zenithTunnel = document.querySelector('.zenith-tunnel') as HTMLElement;
-    const dialContainer = document.querySelector('.dial-container') as HTMLElement;
-    const mainDial = document.querySelector('.main-dial') as HTMLElement;
-    const dialLabels = document.querySelectorAll('.dial-label');
+    const twinReal = document.querySelector<HTMLElement>('.twin-real');
+    const scanLine = document.querySelector<HTMLElement>('.scan-line');
+    const twinContainer = document.querySelector<HTMLElement>(
+      '.digital-twin-container'
+    );
+    const dialContainer = document.querySelector<HTMLElement>('.dial-container');
+    const mainDial = document.querySelector<HTMLElement>('.main-dial');
+    const dialLabels = document.querySelectorAll<HTMLElement>('.dial-label');
+    const dialCaption = document.getElementById('dial-label');
+
+    const reduceMotion = prefersReducedMotion();
+
+    if (reduceMotion) {
+      parallaxImgs.forEach(el => {
+        el.style.translate = '0 0%';
+      });
+      stackCards.forEach(el => {
+        el.style.transform = 'scale(1) translateY(0)';
+        el.style.filter = 'blur(0px) brightness(1)';
+      });
+      if (twinReal) twinReal.style.clipPath = 'inset(0 0 0 0)';
+      if (scanLine) scanLine.style.display = 'none';
+    }
+
+    let docHeight = 0;
+    let hMaxScroll = 0;
+
+    const measure = () => {
+      docHeight = Math.max(
+        0,
+        document.documentElement.scrollHeight - window.innerHeight
+      );
+      hMaxScroll = hScrollTrack
+        ? Math.max(0, hScrollTrack.scrollWidth - window.innerWidth)
+        : 0;
+    };
+
+    measure();
+
+    const resizeObserver = new ResizeObserver(measure);
+    resizeObserver.observe(document.documentElement);
+    resizeObserver.observe(document.body);
+    if (hScrollTrack) resizeObserver.observe(hScrollTrack);
+    window.addEventListener('resize', measure);
 
     let ticking = false;
+    let scrollRaf = 0;
+    let navbarSolid: boolean | null = null;
+    let activeDialIndex = -1;
+    let dialCaptionAnimation: Animation | null = null;
+
     let hTargetX = 0;
     let hCurrentX = 0;
-    let animationFrameId: number;
+    let hRaf = 0;
+    let hRunning = false;
+    let hLastTime = 0;
+
+    const applyHTrack = () => {
+      if (hScrollTrack) {
+        hScrollTrack.style.transform = `translate3d(${hCurrentX}px, 0, 0)`;
+      }
+    };
+
+    const tickHScroll = (now: number) => {
+      const dt = Math.min(now - hLastTime, 64);
+      hLastTime = now;
+      const alpha = 1 - Math.exp(-dt / 160);
+      hCurrentX += (hTargetX - hCurrentX) * alpha;
+
+      if (Math.abs(hTargetX - hCurrentX) < 0.1) {
+        hCurrentX = hTargetX;
+        applyHTrack();
+        hRunning = false;
+        hRaf = 0;
+        return;
+      }
+
+      applyHTrack();
+      hRaf = requestAnimationFrame(tickHScroll);
+    };
+
+    const startHScroll = () => {
+      if (!hScrollTrack || hRunning) return;
+      hRunning = true;
+      hLastTime = performance.now();
+      hRaf = requestAnimationFrame(tickHScroll);
+    };
 
     const handleComplexScroll = () => {
-        const scrollY = window.scrollY;
-        
-        // Navbar & Progress
-        if (navbar && navLogo && navCta) {
-            if (scrollY > 50) {
-                navbar.classList.add('bg-white/90', 'backdrop-blur-md', 'shadow-sm', 'py-4');
-                navbar.classList.remove('bg-transparent', 'py-6');
-                navLogo.classList.remove('text-white');
-                navLogo.classList.add('text-black');
-                navLinks.forEach(l => {
-                    l.classList.remove('text-white');
-                    l.classList.add('text-black');
-                });
-                navCta.classList.remove('border-white/40', 'text-white', 'hover:bg-white', 'hover:text-black');
-                navCta.classList.add('border-black/20', 'text-black', 'hover:bg-black', 'hover:text-white');
+      const scrollY = window.scrollY;
+      const viewportHeight = window.innerHeight;
+      const isSolid = scrollY > 50;
+
+      // READ PHASE
+      const parallaxReads: Array<{ el: HTMLElement; yPos: number }> = [];
+      if (!reduceMotion) {
+        parallaxImgs.forEach(el => {
+          const rect = el.getBoundingClientRect();
+          if (rect.top < viewportHeight && rect.bottom > 0) {
+            parallaxReads.push({ el, yPos: (rect.top / viewportHeight) * 15 });
+          }
+        });
+      }
+
+      const stackReads: Array<{
+        el: HTMLElement;
+        transform: string;
+        filter: string;
+      }> = [];
+
+      if (!reduceMotion) {
+        stackCards.forEach(card => {
+          const rect = card.getBoundingClientRect();
+          if (rect.top < 100) {
+            const depth = (100 - rect.top) * 0.05;
+            const scale = Math.max(0.9, 1 - depth * 0.01);
+            const blur = Math.min(4, depth * 0.2);
+            stackReads.push({
+              el: card,
+              transform: `scale(${scale}) translateY(${depth * 2}px)`,
+              filter: `blur(${blur}px) brightness(${Math.max(
+                0.7,
+                1 - depth * 0.05
+              )})`,
+            });
+          } else {
+            stackReads.push({
+              el: card,
+              transform: 'scale(1) translateY(0)',
+              filter: 'blur(0px) brightness(1)',
+            });
+          }
+        });
+      }
+
+      const hRect = hScrollWrapper?.getBoundingClientRect();
+      const twinRect = twinContainer?.getBoundingClientRect();
+      const dialRect = dialContainer?.getBoundingClientRect();
+
+      // WRITE PHASE
+      if (navbar && navLogo && navCta && isSolid !== navbarSolid) {
+        navbarSolid = isSolid;
+
+        if (isSolid) {
+          navbar.classList.add(
+            'bg-white/90',
+            'backdrop-blur-md',
+            'shadow-sm',
+            'py-4'
+          );
+          navbar.classList.remove('bg-transparent', 'py-6');
+          navLogo.classList.remove('text-white');
+          navLogo.classList.add('text-black');
+          navLinks.forEach(link => {
+            link.classList.remove('text-white');
+            link.classList.add('text-black');
+          });
+          navCta.classList.remove(
+            'border-white/40',
+            'text-white',
+            'hover:bg-white',
+            'hover:text-black'
+          );
+          navCta.classList.add(
+            'border-black/20',
+            'text-black',
+            'hover:bg-black',
+            'hover:text-white'
+          );
+        } else {
+          navbar.classList.remove(
+            'bg-white/90',
+            'backdrop-blur-md',
+            'shadow-sm',
+            'py-4'
+          );
+          navbar.classList.add('bg-transparent', 'py-6');
+          navLogo.classList.add('text-white');
+          navLogo.classList.remove('text-black');
+          navLinks.forEach(link => {
+            link.classList.add('text-white');
+            link.classList.remove('text-black');
+          });
+          navCta.classList.add(
+            'border-white/40',
+            'text-white',
+            'hover:bg-white',
+            'hover:text-black'
+          );
+          navCta.classList.remove(
+            'border-black/20',
+            'text-black',
+            'hover:bg-black',
+            'hover:text-white'
+          );
+        }
+      }
+
+      if (progressBar) {
+        const progress = docHeight > 0 ? clamp(scrollY / docHeight, 0, 1) : 0;
+        progressBar.style.transform = `scaleX(${progress})`;
+      }
+
+      parallaxReads.forEach(({ el, yPos }) => {
+        el.style.translate = `0 ${yPos}%`;
+      });
+
+      stackReads.forEach(({ el, transform, filter }) => {
+        el.style.transform = transform;
+        el.style.filter = filter;
+      });
+
+      if (hScrollWrapper && hScrollTrack && hRect) {
+        if (hRect.top <= 0 && hRect.bottom >= viewportHeight) {
+          const scrollProgress =
+            -hRect.top / Math.max(1, hRect.height - viewportHeight);
+          const nextTarget = -scrollProgress * hMaxScroll;
+          if (Math.abs(nextTarget - hTargetX) > 0.1) {
+            hTargetX = nextTarget;
+            if (reduceMotion) {
+              hCurrentX = hTargetX;
+              applyHTrack();
             } else {
-                navbar.classList.remove('bg-white/90', 'backdrop-blur-md', 'shadow-sm', 'py-4');
-                navbar.classList.add('bg-transparent', 'py-6');
-                navLogo.classList.add('text-white');
-                navLogo.classList.remove('text-black');
-                navLinks.forEach(l => {
-                    l.classList.add('text-white');
-                    l.classList.remove('text-black');
-                });
-                navCta.classList.add('border-white/40', 'text-white', 'hover:bg-white', 'hover:text-black');
-                navCta.classList.remove('border-black/20', 'text-black', 'hover:bg-black', 'hover:text-white');
+              startHScroll();
             }
+          }
+        } else if (hRect.top > 0 && hTargetX !== 0) {
+          hTargetX = 0;
+          if (reduceMotion) {
+            hCurrentX = 0;
+            applyHTrack();
+          } else {
+            startHScroll();
+          }
         }
+      }
 
-        if (progressBar) {
-            const totalHeight = document.body.scrollHeight - window.innerHeight;
-            const progress = (scrollY / totalHeight) * 100;
-            progressBar.style.width = `${progress}%`;
+      if (!reduceMotion && twinContainer && twinReal && scanLine && twinRect) {
+        if (twinRect.top < viewportHeight && twinRect.bottom > 0) {
+          const progress = clamp(
+            (viewportHeight - twinRect.top) /
+              (viewportHeight + twinRect.height),
+            0,
+            1
+          );
+          const percentage = progress * 100;
+          twinReal.style.clipPath = `inset(0 ${100 - percentage}% 0 0)`;
+          scanLine.style.transform = `translateX(${percentage}vw)`;
         }
+      }
 
-        // Parallax Images
-        parallaxImgs.forEach(img => {
-            const rect = img.getBoundingClientRect();
-            if (rect.top < window.innerHeight && rect.bottom > 0) {
-                const yPos = (rect.top / window.innerHeight) * 15;
-                (img as HTMLElement).style.transform = `translateY(${yPos}%) scale(1.1)`;
-            }
-        });
+      if (!reduceMotion && dialContainer && mainDial && dialRect) {
+        if (dialRect.top < viewportHeight && dialRect.bottom > 0) {
+          const progress = clamp(
+            (viewportHeight - dialRect.top) /
+              (viewportHeight + dialRect.height),
+            0,
+            1
+          );
+          mainDial.style.transform = `rotate(${progress * 180 - 90}deg)`;
 
-        // Stacking Cards
-        stackCards.forEach((card, index) => {
-            const rect = card.getBoundingClientRect();
-            if (rect.top < 100) {
-                const depth = (100 - rect.top) * 0.05;
-                const scale = Math.max(0.9, 1 - depth * 0.01);
-                const blur = Math.min(4, depth * 0.2);
-                (card as HTMLElement).style.transform = `scale(${scale}) translateY(${depth * 2}px)`;
-                (card as HTMLElement).style.filter = `blur(${blur}px) brightness(${Math.max(0.7, 1 - depth * 0.05)})`;
-            } else {
-                (card as HTMLElement).style.transform = `scale(1) translateY(0)`;
-                (card as HTMLElement).style.filter = `blur(0px) brightness(1)`;
-            }
-        });
+          const nextIndex = Math.floor(progress * dialLabels.length);
+          if (nextIndex !== activeDialIndex) {
+            activeDialIndex = nextIndex;
+            dialLabels.forEach((label, index) => {
+              if (index === nextIndex) {
+                label.classList.add('text-black', 'scale-110');
+                label.classList.remove('text-gray-400', 'scale-100');
+              } else {
+                label.classList.remove('text-black', 'scale-110');
+                label.classList.add('text-gray-400', 'scale-100');
+              }
+            });
 
-        // Sensory Fragments
-        fragments.forEach((frag, i) => {
-            const rect = frag.getBoundingClientRect();
-            if (rect.top < window.innerHeight && rect.bottom > 0) {
-                const speed = (i % 3 + 1) * 0.1;
-                const yPos = (rect.top - window.innerHeight / 2) * speed;
-                (frag as HTMLElement).style.transform = `translateY(${yPos}px) rotate(${yPos * 0.05}deg)`;
-            }
-        });
+            if (dialCaption) {
+              const nextLabel = dialLabels[nextIndex]?.textContent?.trim() ?? '';
+              if (nextLabel && dialCaption.textContent !== nextLabel) {
+                dialCaptionAnimation?.cancel();
 
-        // Horizontal Scroll
-        if (hScrollWrapper && hScrollTrack) {
-            const rect = hScrollWrapper.getBoundingClientRect();
-            if (rect.top <= 0 && rect.bottom >= window.innerHeight) {
-                const scrollProgress = -rect.top / (rect.height - window.innerHeight);
-                const maxScroll = hScrollTrack.scrollWidth - window.innerWidth;
-                hTargetX = -scrollProgress * maxScroll;
-            } else if (rect.top > 0) {
-                hTargetX = 0;
+                if (reduceMotion) {
+                  dialCaption.textContent = nextLabel;
+                } else {
+                  const fadeOut = dialCaption.animate(
+                    [
+                      { opacity: 1, transform: 'translateY(0)' },
+                      { opacity: 0, transform: 'translateY(-4px)' },
+                    ],
+                    { duration: 100, easing: 'ease-out' }
+                  );
+                  dialCaptionAnimation = fadeOut;
+                  fadeOut.onfinish = () => {
+                    dialCaption.textContent = nextLabel;
+                    dialCaptionAnimation = dialCaption.animate(
+                      [
+                        { opacity: 0, transform: 'translateY(4px)' },
+                        { opacity: 1, transform: 'translateY(0)' },
+                      ],
+                      {
+                        duration: 150,
+                        easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+                      }
+                    );
+                  };
+                }
+              }
             }
+          }
         }
-
-        // Digital Twin Scan
-        if (twinContainer && twinReal && scanLine) {
-            const rect = twinContainer.getBoundingClientRect();
-            if (rect.top < window.innerHeight && rect.bottom > 0) {
-                const progress = Math.max(0, Math.min(1, (window.innerHeight - rect.top) / (window.innerHeight + rect.height)));
-                const percentage = progress * 100;
-                twinReal.style.clipPath = `inset(0 ${100 - percentage}% 0 0)`;
-                scanLine.style.transform = `translateX(${percentage}vw)`;
-            }
-        }
-
-        // Zenith Tunnel
-        if (zenithTunnel && tunnelFrames.length > 0) {
-            const rect = zenithTunnel.getBoundingClientRect();
-            if (rect.top < window.innerHeight && rect.bottom > 0) {
-                const progress = Math.max(0, Math.min(1, -rect.top / (rect.height - window.innerHeight)));
-                tunnelFrames.forEach((frame, i) => {
-                    const offset = i * 0.25;
-                    let zPos = ((progress * 2) - offset) * 1000;
-                    let opacity = 1;
-                    if (zPos > 800) opacity = 1 - (zPos - 800) / 200;
-                    if (zPos < -500) opacity = 1 - (-500 - zPos) / 500;
-                    
-                    (frame as HTMLElement).style.transform = `translateZ(${zPos}px)`;
-                    (frame as HTMLElement).style.opacity = Math.max(0, opacity).toString();
-                });
-            }
-        }
-
-        // Neighborhood Dial
-        if (dialContainer && mainDial) {
-            const rect = dialContainer.getBoundingClientRect();
-            if (rect.top < window.innerHeight && rect.bottom > 0) {
-                const progress = Math.max(0, Math.min(1, (window.innerHeight - rect.top) / (window.innerHeight + rect.height)));
-                const rotation = progress * 180 - 90;
-                mainDial.style.transform = `rotate(${rotation}deg)`;
-                
-                const activeIndex = Math.floor(progress * dialLabels.length);
-                dialLabels.forEach((label, i) => {
-                    if (i === activeIndex) {
-                        label.classList.add('text-black', 'scale-110');
-                        label.classList.remove('text-gray-400', 'scale-100');
-                    } else {
-                        label.classList.remove('text-black', 'scale-110');
-                        label.classList.add('text-gray-400', 'scale-100');
-                    }
-                });
-            }
-        }
+      }
     };
 
     const onScroll = () => {
-        if (!ticking) {
-            window.requestAnimationFrame(() => {
-                handleComplexScroll();
-                ticking = false;
-            });
-            ticking = true;
-        }
+      if (!ticking) {
+        ticking = true;
+        scrollRaf = window.requestAnimationFrame(() => {
+          handleComplexScroll();
+          ticking = false;
+        });
+      }
     };
 
     window.addEventListener('scroll', onScroll, { passive: true });
-
-    const renderLoop = () => {
-        if (hScrollTrack) {
-            hCurrentX += (hTargetX - hCurrentX) * 0.1;
-            hScrollTrack.style.transform = `translate3d(${hCurrentX}px, 0, 0)`;
-        }
-        animationFrameId = requestAnimationFrame(renderLoop);
-    };
-    animationFrameId = requestAnimationFrame(renderLoop);
+    handleComplexScroll();
 
     return () => {
-        window.removeEventListener('scroll', onScroll);
-        cancelAnimationFrame(animationFrameId);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', measure);
+      resizeObserver.disconnect();
+      if (scrollRaf) cancelAnimationFrame(scrollRaf);
+      if (hRaf) cancelAnimationFrame(hRaf);
     };
   }, []);
 }

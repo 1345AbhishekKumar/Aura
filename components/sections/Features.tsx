@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
+import { EASE_OUT } from '@/lib/motion';
 
 export function WhyFind() {
   return (
@@ -22,6 +23,7 @@ export function WhyFind() {
 
 export function ArrowsSection() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const reduceMotion = useReducedMotion() ?? false;
   const cards = [
     { title: "Arrival & Welcome", img: "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&q=80", desc: "Step into a world of luxury where every detail is prepared for your arrival." },
     { title: "Experience & Dining", img: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80", desc: "Curated activities, world-class cuisine, and unforgettable moments." },
@@ -54,13 +56,24 @@ export function ArrowsSection() {
                         onHoverStart={() => setHoveredIndex(idx)}
                         onHoverEnd={() => setHoveredIndex(null)}
                         animate={{
-                            flex: hoveredIndex === idx ? 3 : 1,
-                            filter: hoveredIndex !== null && hoveredIndex !== idx ? "grayscale(100%) brightness(0.5)" : "grayscale(0%) brightness(1)"
+                            flex: hoveredIndex === idx ? 3 : 1
                         }}
-                        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                        transition={{ duration: reduceMotion ? 0 : 0.5, ease: EASE_OUT }}
                         className="relative h-full rounded-2xl overflow-hidden cursor-pointer group flex-1"
                     >
-                        <img src={card.img} alt={card.title} className="absolute inset-0 w-full h-full object-cover" />
+                        <img
+                            src={card.img}
+                            alt={card.title}
+                            className={`absolute inset-0 w-full h-full object-cover ${
+                                hoveredIndex !== null && hoveredIndex !== idx ? 'grayscale' : ''
+                            }`}
+                        />
+                        <motion.div
+                            className="absolute inset-0 bg-black pointer-events-none"
+                            animate={{ opacity: hoveredIndex !== null && hoveredIndex !== idx ? 0.5 : 0 }}
+                            transition={{ duration: reduceMotion ? 0 : 0.5, ease: EASE_OUT }}
+                            aria-hidden="true"
+                        />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
                         
                         <div className="absolute bottom-0 left-0 p-8 w-full">

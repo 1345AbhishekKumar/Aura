@@ -1,7 +1,10 @@
 import { useEffect } from 'react';
+import { prefersReducedMotion } from '@/lib/utils';
 
 export function useIntersectionAndPhysics() {
   useEffect(() => {
+    const reduceMotion = prefersReducedMotion();
+
     // --- Intersection Observer ---
     const observerOptions = { root: null, rootMargin: '0px', threshold: 0.15 };
     const revealElements = document.querySelectorAll('.reveal-up, .reveal-clip, .curtain-container, .line-draw, .highlight-draw, .footer-reveal');
@@ -10,7 +13,6 @@ export function useIntersectionAndPhysics() {
     const well = document.getElementById('physics-well');
     const physicsObjs = Array.from(document.querySelectorAll('.physics-obj')) as HTMLElement[];
 
-    let currentSlide = 0;
     let physicsActive = true;
     let mouseVX = 0, mouseVY = 0;
     let lastMouseX = 0, lastMouseY = 0;
@@ -36,6 +38,10 @@ export function useIntersectionAndPhysics() {
         if (el.dataset.animated) return;
         el.dataset.animated = 'true';
         const target = parseInt(el.getAttribute('data-target') || '0');
+        if (reduceMotion) {
+            el.innerText = target.toString() + (el.getAttribute('data-suffix') || '');
+            return;
+        }
         const duration = 2000;
         const start = performance.now();
         
@@ -59,15 +65,59 @@ export function useIntersectionAndPhysics() {
     };
 
     // --- Testimonial Slider ---
-    const nextSlide = () => {
-        if (tSlides.length === 0) return;
-        tSlides[currentSlide].classList.remove('opacity-100', 'z-10');
-        tSlides[currentSlide].classList.add('opacity-0', 'z-0');
-        currentSlide = (currentSlide + 1) % tSlides.length;
-        tSlides[currentSlide].classList.remove('opacity-0', 'z-0');
-        tSlides[currentSlide].classList.add('opacity-100', 'z-10');
+    const slides = Array.from(tSlides) as HTMLElement[];
+    let currentSlide = 0;
+    let slideInterval: ReturnType<typeof setInterval> | undefined;
+
+    const showSlide = (nextIndex: number) => {
+        slides.forEach((slide, index) => {
+            const isActive = index === nextIndex;
+            slide.classList.toggle('is-active', isActive);
+            if (isActive) {
+                slide.removeAttribute('aria-hidden');
+            } else {
+                slide.setAttribute('aria-hidden', 'true');
+            }
+        });
+        currentSlide = nextIndex;
     };
-    let slideInterval = setInterval(nextSlide, 5000);
+
+    const nextSlide = () => {
+        if (slides.length < 2) return;
+        showSlide((currentSlide + 1) % slides.length);
+    };
+
+    const testimonialContainer = document.getElementById('testimonial-container');
+
+    const stopSlides = () => {
+        if (slideInterval) {
+            clearInterval(slideInterval);
+            slideInterval = undefined;
+        }
+    };
+
+    const startSlides = () => {
+        stopSlides();
+        if (!document.hidden && slides.length > 1) {
+            slideInterval = setInterval(nextSlide, 5000);
+        }
+    };
+
+    if (testimonialContainer) {
+        testimonialContainer.addEventListener('pointerenter', stopSlides);
+        testimonialContainer.addEventListener('pointerleave', startSlides);
+        testimonialContainer.addEventListener('focusin', stopSlides);
+        testimonialContainer.addEventListener('focusout', startSlides);
+    }
+
+    const onVisibilityChange = () => {
+        if (document.hidden) stopSlides();
+        else startSlides();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    showSlide(0);
+    startSlides();
 
     // --- Physics Well Simulation ---
     const initPhysics = () => {
@@ -152,7 +202,14 @@ export function useIntersectionAndPhysics() {
 
     return () => {
         observer.disconnect();
-        clearInterval(slideInterval);
+        stopSlides();
+        document.removeEventListener('visibilitychange', onVisibilityChange);
+        if (testimonialContainer) {
+            testimonialContainer.removeEventListener('pointerenter', stopSlides);
+            testimonialContainer.removeEventListener('pointerleave', startSlides);
+            testimonialContainer.removeEventListener('focusin', stopSlides);
+            testimonialContainer.removeEventListener('focusout', startSlides);
+        }
         physicsActive = false;
         cancelAnimationFrame(animationFrameId);
         window.removeEventListener('pointermove', handlePointerMove);

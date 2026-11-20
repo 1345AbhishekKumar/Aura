@@ -18,7 +18,7 @@ export default function Home() {
     <>
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <div id="magic-cursor" aria-hidden="true"></div>
-      <div className="progress-bar" id="progressBar" aria-hidden="true" role="progressbar" aria-valuemin={0} aria-valuemax={100}></div>
+      <div className="progress-bar" id="progress-bar" aria-hidden="true"></div>
       
       <Navbar />
       <main id="main-content" tabIndex={-1} className="outline-none">
