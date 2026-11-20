@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { EASE_OUT } from '@/lib/motion';
+import { cn } from '@/lib/utils';
 
 export function WhyFind() {
   return (
@@ -64,9 +65,10 @@ export function ArrowsSection() {
                         <img
                             src={card.img}
                             alt={card.title}
-                            className={`absolute inset-0 w-full h-full object-cover ${
-                                hoveredIndex !== null && hoveredIndex !== idx ? 'grayscale' : ''
-                            }`}
+                            className={cn(
+                                "absolute inset-0 w-full h-full object-cover",
+                                hoveredIndex !== null && hoveredIndex !== idx && "grayscale"
+                            )}
                         />
                         <motion.div
                             className="absolute inset-0 bg-black pointer-events-none"
